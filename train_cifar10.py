@@ -18,7 +18,8 @@ import gan
 # 超参数
 batch_size = 128
 epoch_num = 100
-learning_rate = 1e-4
+learning_rate = 2e-4
+beta1 = 0.5
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 data_path = 'D:/Data'
 
@@ -72,12 +73,12 @@ plt.savefig(f"{writer.log_dir}/view_data.png")
 plt.close()
 
 # 构造网络
-generator = dcgan.GeneratorCIFAR10().to(device)
-discriminator = dcgan.DiscriminatorCIFAR10().to(device)
+generator = gan.GeneratorDCGAN().to(device)
+discriminator = gan.DiscriminatorDCGAN().to(device)
 
 # 优化器
-g_optim = optim.Adam(generator.parameters(), lr=learning_rate, betas=(0.5, 0.999))
-d_optim = optim.Adam(discriminator.parameters(), lr=learning_rate, betas=(0.5, 0.999))
+g_optim = optim.Adam(generator.parameters(), lr=learning_rate, betas=(beta1, 0.999))
+d_optim = optim.Adam(discriminator.parameters(), lr=learning_rate, betas=(beta1, 0.999))
 
 # 损失函数
 criterion = nn.BCELoss().to(device)
@@ -87,15 +88,16 @@ criterion = nn.BCELoss().to(device)
 test_input = torch.randn(16, 100).to(device)
 
 # 损失函数记录
-D_loss = []
-G_loss = []
-iterations = []
+# D_loss = []
+# G_loss = []
+# iterations = []
 
-iteration = 0
-g_loss_total = 0
-d_loss_total = 0
+# iteration = 0
+
 # 开始训练
 for epoch in range(epoch_num):
+    g_loss_total = 0
+    d_loss_total = 0
     for imgs, tragets in tqdm(dataLoader):
         imgs = imgs.to(device)
         random_noise = torch.randn(batch_size, 100).to(device)
@@ -131,11 +133,11 @@ for epoch in range(epoch_num):
         g_optim.step()
         
         # 记录损失函数
-        if iteration == 1 or iteration % 100 == 0:
-            D_loss.append(d_loss)
-            G_loss.append(g_loss.item())
-            iterations.append(iteration)
-        iteration = iteration + 1
+        # if iteration == 1 or iteration % 100 == 0:
+        #     D_loss.append(d_loss)
+        #     G_loss.append(g_loss.item())
+        #     iterations.append(iteration)
+        # iteration = iteration + 1
     
     g_loss_avg = g_loss_total / len(dataLoader)
     d_loss_avg = d_loss_total / len(dataLoader)
@@ -152,9 +154,13 @@ for epoch in range(epoch_num):
         plt.figure(figsize=(4, 4))
         for i in range(16):
             plt.subplot(4, 4, i + 1)
-            # 先归一化，再转换格式
-            plt.imshow((predict[i] + 1) / 2)
+            # 生成器输出范围是(-1,1),需要转换到(0,1)
+            img = (predict[i] + 1) / 2
+            # 确保像素值在合理范围内
+            img = np.clip(img, 0, 1)
+            plt.imshow(img)
             plt.axis('off')
+        plt.tight_layout()
         plt.savefig(f"{writer.log_dir}/generated_img/generated_image_epoch_{epoch+1}.png")
         plt.close()
         # 保存模型
