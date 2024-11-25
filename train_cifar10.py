@@ -8,7 +8,6 @@ from torch.utils.data import DataLoader
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-import math
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 import logging
@@ -18,10 +17,10 @@ import gan
 
 # 超参数
 batch_size = 128
-epoch_num = 200
+epoch_num = 100
 learning_rate = 1e-4
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-data_path = 'E:/Data'
+data_path = 'D:/Data'
 
 # 初始化Tensorboard
 writer = SummaryWriter()
@@ -98,7 +97,6 @@ d_loss_total = 0
 # 开始训练
 for epoch in range(epoch_num):
     for imgs, tragets in tqdm(dataLoader):
-        # print(f"\r进度:{step + 1} / {math.ceil(len(dataset) / batch_size)}", end="")
         imgs = imgs.to(device)
         random_noise = torch.randn(batch_size, 100).to(device)
         
@@ -144,8 +142,6 @@ for epoch in range(epoch_num):
     # 输出信息
     print(f'Epoch: {epoch + 1}/{epoch_num} | G Loss: {g_loss_avg:.4f} | D Loss: {d_loss_avg:.4f}')
     logging.info(f'Epoch: {epoch + 1}/{epoch_num} | G Loss: {g_loss_avg:.4f} | D Loss: {d_loss_avg:.4f}')
-    # writer.add_scalar('Loss/G', g_loss_avg, global_step=epoch + 1)
-    # writer.add_scalar('Loss/D', d_loss_avg, global_step=epoch + 1)
     writer.add_scalars('Loss', {'G': g_loss_avg, 'D': d_loss_avg}, global_step=epoch + 1)
     
 
@@ -170,14 +166,3 @@ for epoch in range(epoch_num):
             'discriminator': discriminator.state_dict(),
         }
         torch.save(state, f'{writer.log_dir}/checkpoints/ckpt_{epoch+1}.pth')
-
-# 展示损失函数曲线
-# plt.figure(figsize=(4, 4))
-# plt.title("loss")
-# plt.xlabel("iterations")
-# plt.ylabel("loss")
-# plt.plot(iterations, G_loss, c="tab:red", label='G_loss')
-# plt.plot(iterations, D_loss, c="tab:blue", label='D_loss')
-# plt.legend()
-# plt.savefig(f"{writer.log_dir}/loss.png")
-# plt.close()
