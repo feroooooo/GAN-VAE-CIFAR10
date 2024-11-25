@@ -1,0 +1,6 @@
+torch==2.5.1+cu124
+tqdm==4.66.5
+matplotlib==3.9.2
+torchaudio==2.5.1
+torchvision==0.20.1
+tensorboard==2.18.0
