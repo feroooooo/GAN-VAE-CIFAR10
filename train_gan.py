@@ -12,16 +12,15 @@ from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 import logging
 
-import dcgan
 import gan
 
 # 超参数
-batch_size = 128
-epoch_num = 100
+batch_size = 64
+epoch_num = 200
 learning_rate = 2e-4
 beta1 = 0.5
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-data_path = 'D:/Data'
+data_path = 'E:/Data'
 
 # 初始化Tensorboard
 writer = SummaryWriter()
@@ -73,8 +72,8 @@ plt.savefig(f"{writer.log_dir}/view_data.png")
 plt.close()
 
 # 构造网络
-generator = gan.GeneratorDCGAN().to(device)
-discriminator = gan.DiscriminatorDCGAN().to(device)
+generator = gan.Generator().to(device)
+discriminator = gan.Discriminator().to(device)
 
 # 优化器
 g_optim = optim.Adam(generator.parameters(), lr=learning_rate, betas=(beta1, 0.999))
@@ -88,14 +87,11 @@ criterion = nn.BCELoss().to(device)
 test_input = torch.randn(16, 100).to(device)
 
 # 损失函数记录
-# D_loss = []
-# G_loss = []
-# iterations = []
-
-# iteration = 0
 
 # 开始训练
 for epoch in range(epoch_num):
+    generator.train()
+    discriminator.train()
     g_loss_total = 0
     d_loss_total = 0
     for imgs, tragets in tqdm(dataLoader):
@@ -132,12 +128,6 @@ for epoch in range(epoch_num):
         g_loss_total += g_loss.item()
         g_optim.step()
         
-        # 记录损失函数
-        # if iteration == 1 or iteration % 100 == 0:
-        #     D_loss.append(d_loss)
-        #     G_loss.append(g_loss.item())
-        #     iterations.append(iteration)
-        # iteration = iteration + 1
     
     g_loss_avg = g_loss_total / len(dataLoader)
     d_loss_avg = d_loss_total / len(dataLoader)
@@ -149,26 +139,28 @@ for epoch in range(epoch_num):
 
     # 每10轮记录一次生成图像
     if (epoch + 1) % 10 == 0 or epoch == 0:
-        predict = generator(test_input).detach().cpu().numpy()
-        predict = np.transpose(predict, (0, 2, 3, 1))  # 转换为(N,H,W,C)格式
-        plt.figure(figsize=(4, 4))
-        for i in range(16):
-            plt.subplot(4, 4, i + 1)
-            # 生成器输出范围是(-1,1),需要转换到(0,1)
-            img = (predict[i] + 1) / 2
-            # 确保像素值在合理范围内
-            img = np.clip(img, 0, 1)
-            plt.imshow(img)
-            plt.axis('off')
-        plt.tight_layout()
-        plt.savefig(f"{writer.log_dir}/generated_img/generated_image_epoch_{epoch+1}.png")
-        plt.close()
-        # 保存模型
-        state = {
-            'epoch' : epoch + 1,
-            'd_loss' : d_loss_avg,
-            'g_loss' : g_loss_avg,
-            'generator': generator.state_dict(),
-            'discriminator': discriminator.state_dict(),
-        }
-        torch.save(state, f'{writer.log_dir}/checkpoints/ckpt_{epoch+1}.pth')
+        generator.eval()
+        with torch.no_grad():
+            predict = generator(test_input).detach().cpu().numpy()
+            predict = np.transpose(predict, (0, 2, 3, 1))  # 转换为(N,H,W,C)格式
+            plt.figure(figsize=(4, 4))
+            for i in range(16):
+                plt.subplot(4, 4, i + 1)
+                # 生成器输出范围是(-1,1),需要转换到(0,1)
+                img = (predict[i] + 1) / 2
+                # 确保像素值在合理范围内
+                img = np.clip(img, 0, 1)
+                plt.imshow(img)
+                plt.axis('off')
+            plt.tight_layout()
+            plt.savefig(f"{writer.log_dir}/generated_img/generated_image_epoch_{epoch+1}.png")
+            plt.close()
+            # 保存模型
+            state = {
+                'epoch' : epoch + 1,
+                'd_loss' : d_loss_avg,
+                'g_loss' : g_loss_avg,
+                'generator': generator.state_dict(),
+                'discriminator': discriminator.state_dict(),
+            }
+            torch.save(state, f'{writer.log_dir}/checkpoints/ckpt_{epoch+1}.pth')
